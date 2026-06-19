@@ -52,6 +52,18 @@ Challenges may have more than one possible solution.
 
 You can ask the community for help in [the discussions section](https://github.com/theredguild/damn-vulnerable-defi/discussions).
 
+## Validation
+
+For a clean local proof of a challenge solution, keep the writeup minimal and verify with Foundry directly.
+
+Example:
+
+```bash
+forge test --match-contract UnstoppableChallenge -vvv
+```
+
+When sharing a branch or pull request, include only the challenge test files and a short validation note. Keep secrets, RPC URLs, private keys, and generated logs out of the public diff.
+
 ## Disclaimer
 
 All code, practices and patterns in this repository are DAMN VULNERABLE and for educational purposes only.
