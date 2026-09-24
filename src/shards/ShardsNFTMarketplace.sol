@@ -14,7 +14,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 /**
  * @notice NFT marketplace where sellers offer NFTs, and buyers can collectively acquire pieces of them.
  *         Pieces of the NFT are represented by an integrated ERC1155 token.
- *         The marketplace charges sellers a 2% fee, stored in a secure on-chain vault.
+ *         The marketplace charges sellers a 1% fee, stored in a secure on-chain vault.
  */
 contract ShardsNFTMarketplace is IShardsNFTMarketplace, IERC721Receiver, ERC1155 {
     using FixedPointMathLib for uint256;
